@@ -46,6 +46,18 @@ Simulation Loop: Pure Pursuit for path following, conditional DWA, SMC control, 
 Validation: Error plots post-simulation.
 Helpers: DWA function and distance calculator.
 
+##  Standalone Test Scripts
+
+In addition to the main navigation script, the repository includes independent test scripts for isolated validation of core components:
+
+### kinematics_dynamics_test.m：
+
+Run this script directly in MATLAB to compare pure kinematic (ideal instantaneous response) and full dynamic (realistic transients with mass/inertia/damping) behaviors under the same input; modify reference wheel velocities or control inputs (u_v, u_w) to generate different trajectories (e.g., circle, figure-8), and adjust robot parameters (m, I, d_v, d_w) to observe effects on acceleration, deceleration, and path realism.
+
+### smc_test.m：
+
+Run this script directly in MATLAB to evaluate the Sliding Mode Controller's performance on the dynamic model with desired vs. actual trajectory overlay; tune SMC parameters (lambda_v/w, eta, F, phi) to reduce tracking errors and chattering, or modify reference signals (v_d, w_d) to test robustness under different path demands (e.g., aggressive turns or varying speeds).
+
 ## Results
 The robot successfully navigates mazes, with actual paths closely following planned ones. Velocity errors converge to <0.1 m/s. Example output:
 Simulation Example
