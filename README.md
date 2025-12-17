@@ -1,87 +1,61 @@
-# Project
- Autonomous Mobile Robots Final Project -- Two-wheel differential drive robot obstacle avoidance design
-This project implements a complete navigation and control framework for a differential-drive mobile robot in a 2D environment with obstacles.
-The system combines global path planning, local obstacle avoidance, path following, and robust low-level control to guide the robot safely to a target position.
-1. Project Overview
-The navigation pipeline is composed of four main modules:
-RRT* for global path planning
-Pure Pursuit for path following
-Dynamic Window Approach (DWA) for local obstacle avoidance
-Sliding Mode Control (SMC) for velocity tracking and torque control
-Each module operates at a different level of abstraction, from high-level planning to low-level motor control.
+# Autonomous Mobile Robot Simulation Project
+##  Overview
+This repository contains a MATLAB implementation of a two-wheeled differential drive mobile robot simulation, developed as a project for the "Autonomous Mobile Robots: Control and Planning" course at NYU (Fall 2025, taught by Aliasghar Moj Arab). The project covers system modeling (kinematics and dynamics), robust control using Sliding Mode Control (SMC), and motion planning with RRT* for global paths and Dynamic Window Approach (DWA) for local obstacle avoidance. It includes real-time visualization of planned vs. actual trajectories in a maze environment.
 
-2. System Architecture
-The overall workflow is:
-RRT* generates a collision-free global path as a sequence of waypoints.
-Pure Pursuit converts the robot pose and waypoints into desired linear and angular velocities.
-DWA is activated only when obstacles are too close and modifies the desired velocities for safe local avoidance.
-Sliding Mode Control converts desired velocities into left and right wheel torques.
-Robot dynamics and kinematics are simulated to update the robot state.
-Summary:
-RRT decides where to go
-Pure Pursuit decides how to follow the path
-DWA decides how to avoid obstacles
-SMC decides how to apply forces to the robot
+The simulation demonstrates autonomous navigation in a 10x10 m map with obstacles, ensuring safe and efficient path following.
 
-3. Modeling
-3.1 Kinematics
-The robot is modeled as a planar differential-drive system:
-𝑥˙=𝑣cos⁡𝜃, 𝑦˙=𝑣sin⁡𝜃, 𝜃˙=𝜔
-Assumptions:
-Rigid body，No wheel slip，Motion on a flat 2D plane，Low-speed operation
+## Features
 
-3.2 Dynamics
-The simplified dynamic model is:
-𝑣˙=(𝜏_𝑟+𝜏_l)/𝑚r−𝑑_𝑣𝑣
-𝜔˙=𝑏(𝜏_𝑟−𝜏_𝑙)/𝐼𝑟−𝑑_𝜔𝜔
-Assumptions:
-Constant mass and inertia
-Linear damping
-Ideal actuators
-Bounded disturbances
+- System Modeling: Unicycle kinematics and Lagrangian dynamics for realistic robot motion.
+- Control: SMC with smooth approximation to track reference velocities robustly.
+- Motion Planning: Hierarchical approach – RRT* for global planning, conditional DWA for avoidance.
+- Visualization: Animated plot showing robot trajectory, planned path, and obstacle map.
+- Validation: Post-simulation plots for velocity errors.
 
-4. Control Methodology
-Sliding Mode Control (SMC)
-Sliding Mode Control is used for robust velocity tracking.
-Control objective: track desired linear and angular velocities
-Sliding surfaces are defined using velocity errors
-A smooth tanh() function is used to reduce chattering
-Robust against modeling errors and disturbances
+## Prerequisites
 
-5. Motion Planning
-5.1 Global Planning: RRT*
-Plans a collision-free path in a known map
-Works well in cluttered environments
-Outputs a sequence of waypoints
+MATLAB R2023a or later.
+Robotics System Toolbox (for plannerRRTStar, controllerPurePursuit, etc.).
+No additional installations needed; the script is self-contained.
 
-5.2 Path Following: Pure Pursuit
-Tracks the global path smoothly
-Reduces heading errors
-Prevents error accumulation during motion
+## Installation
 
-5.3 Local Avoidance: DWA
-Activated only when obstacles are close
-Samples feasible velocity commands
-Selects safe velocities based on heading, clearance, and speed
+```bash
+Clone the repository:textgit clone https://github.com/yourusername/robot-project.git
+cd robot-project
+```
 
-6. Simulation Environment
-MATLAB-based simulation
-Binary occupancy grid map
-Obstacle inflation for safety margin
-Real-time visualization of:
-Planned path (green dashed line)
-Actual robot trajectory (red line)
+Open MATLAB and run robot_project_fixed.m (the main script).
 
-7. Results
+## Usage
 
-The robot successfully reaches the target without collision
-Actual trajectory closely follows the planned path
-Velocity tracking error is close to zero
-Pure Pursuit significantly improves path tracking compared to using DWA alone
+Run the script robot_project_fixed.m in MATLAB.
+The animation will display the robot navigating from [1,1,0] to [9,9,pi/2] (adjustable in code).
+Customize:
+Map: Edit obstacles in the map setup section.
+Parameters: Tune SMC gains (lambda_v), DWA weights (alpha, beta), or Pure Pursuit lookahead.
 
-8. Challenges and Solutions
-Challenge:
-Without Pure Pursuit, small heading errors were amplified by the dynamics, leading to large path deviations.
+Output: Trajectory animation and velocity error plot.
 
-Solution:
-Pure Pursuit was added as a path-following layer to stabilize heading errors and guide the robot along the planned trajectory.
+## Code Structure
+
+Parameters: Robot physics, SMC, DWA settings.
+Map Setup: Binary occupancy map with rectangular obstacles (maze-like).
+Global Planning: RRT* with retry loop for reliability.
+Simulation Loop: Pure Pursuit for path following, conditional DWA, SMC control, state updates, animation.
+Validation: Error plots post-simulation.
+Helpers: DWA function and distance calculator.
+
+## Results
+The robot successfully navigates mazes, with actual paths closely following planned ones. Velocity errors converge to <0.1 m/s. Example output:
+Simulation Example
+(Planned: green dashed; Actual: red; Robot: blue triangle)
+Challenges and Solutions
+
+Path Deviations: Initial DWA over-avoidance; fixed by tuning weights and conditional activation.
+Planning Failures: RRT* probabilistic issues; addressed with retry loop and increased iterations.
+Close to Obstacles: Resolved by larger map inflation and CBF-like checks.
+
+
+## License
+MIT License. Feel free to use and modify for educational purposes.
