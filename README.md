@@ -22,7 +22,7 @@ No additional installations needed; the script is self-contained.
 
 ```bash
 Clone the repository:textgit clone https://github.com/qwerwf/Project.git
-cd robot-project
+cd Project
 ```
 
 Open MATLAB and run robot_project_fixed.m (the main script).
