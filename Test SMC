@@ -1,0 +1,165 @@
+% Test SMC: Sliding Mode Control (SMC) with Desired Trajectory in Animation
+
+clear; clc; close all;
+
+% Parameters
+r = 0.05; b = 0.1; m = 1; I = 0.01; d_v = 0.1; d_w = 0.01;
+dt = 0.02; T = 20; t = 0:dt:T;
+
+% State and logs
+state = zeros(length(t), 5); state(1,:) = [0 0 0 0 0];
+v_log = zeros(size(t)); w_log = zeros(size(t));
+v_d_log = zeros(size(t)); w_d_log = zeros(size(t));
+
+% Sliding surface and error logs
+s_v_log = zeros(size(t)); s_w_log = zeros(size(t));
+e_v_log = zeros(size(t)); e_w_log = zeros(size(t));
+
+% Reference: constant v with sinusoidal w
+v_d = 0.6 * ones(size(t));
+w_d = 1.0 * sin(0.8*t);
+
+% === 新增：计算参考轨迹 (积分参考速度得到预期位置) ===
+ref_pose = zeros(length(t), 3);
+ref_pose(1,:) = [0, 0, 0];
+for i = 1:length(t)-1
+    delta_s = v_d(i) * dt;
+    delta_theta = w_d(i) * dt;
+    theta_mid = ref_pose(i,3) + delta_theta/2;
+    ref_pose(i+1,1) = ref_pose(i,1) + delta_s * cos(theta_mid);
+    ref_pose(i+1,2) = ref_pose(i,2) + delta_s * sin(theta_mid);
+    ref_pose(i+1,3) = wrapToPi(ref_pose(i,3) + delta_theta);
+end
+x_ref = ref_pose(:,1);
+y_ref = ref_pose(:,2);
+
+% SMC parameters
+lambda_v = 3; lambda_w = 3; eta = 3; F = 1; phi = 0.1;
+
+% Visualization setup
+body_length = 0.4; body_width = 0.25;
+body_x = [-body_length/2, body_length/2, body_length/2, -body_length/2, -body_length/2];
+body_y = [-body_width/2, -body_width/2, body_width/2, body_width/2, -body_width/2];
+wheel_l_x = [-0.06 0.06 0.06 -0.06]; wheel_l_y = [-0.02 -0.02 0.02 0.02];
+wheel_r_x = wheel_l_x; wheel_r_y = wheel_l_y;
+wheel_l_offset = [0, b]; wheel_r_offset = [0, -b];
+
+figure('Position',[100 100 900 700]); 
+axis equal; grid on; hold on;
+title('SMC Test - Actual (blue) vs Desired Trajectory (red dashed)');
+xlim([-8 8]); ylim([-8 8]);
+xlabel('X (m)'); ylabel('Y (m)');
+
+desired_traj_plot = plot(x_ref, y_ref, 'r--', 'LineWidth', 2);
+
+% 实际轨迹（蓝色实线）
+trail = plot(0,0,'b-','LineWidth',2);
+
+robot_body = fill(body_x, body_y, 'c', 'FaceAlpha',0.7);
+wheel_left = fill(wheel_l_x, wheel_l_y, 'k');
+wheel_right = fill(wheel_r_x, wheel_r_y, 'k');
+arrow = quiver(0,0,0,0,'r','LineWidth',2,'MaxHeadSize',0.5);
+
+legend({'Desired Trajectory', 'Actual Trajectory'}, 'Location', 'best');
+
+% === ===
+video_obj = VideoWriter('SMC.mp4', 'MPEG-4');  
+video_obj.FrameRate = 1/dt;    
+% video_obj.Quality = 100;     
+open(video_obj)
+
+for i = 1:length(t)-1
+    v_cur = state(i,4); w_cur = state(i,5);
+    
+    e_v = v_d(i) - v_cur; e_w = w_d(i) - w_cur;
+    s_v = e_v; s_w = e_w;
+    
+    u_v = lambda_v*e_v + eta*tanh(s_v/phi) + F*tanh(s_v/phi);
+    u_w = lambda_w*e_w + eta*tanh(s_w/phi) + F*tanh(s_w/phi);
+    
+    tau_sum = m * r * u_v;
+    tau_diff = I * r * u_w / b;
+    tau_r = (tau_sum + tau_diff)/2;
+    tau_l = (tau_sum - tau_diff)/2;
+    
+    a = (tau_r + tau_l)/(r * m) - d_v * v_cur / m;
+    alpha = b * (tau_r - tau_l)/(r * I) - d_w * w_cur / I;
+    
+    state(i+1,4) = v_cur + a*dt;
+    state(i+1,5) = w_cur + alpha*dt;
+    
+    delta_s = state(i+1,4)*dt;
+    delta_theta = state(i+1,5)*dt;
+    theta_mid = state(i,3) + delta_theta/2;
+    
+    state(i+1,1) = state(i,1) + delta_s * cos(theta_mid);
+    state(i+1,2) = state(i,2) + delta_s * sin(theta_mid);
+    state(i+1,3) = wrapToPi(state(i,3) + delta_theta);
+    
+    % Logging
+    v_log(i+1) = state(i+1,4); w_log(i+1) = state(i+1,5);
+    v_d_log(i+1) = v_d(i+1); w_d_log(i+1) = w_d(i+1);
+    s_v_log(i+1) = s_v; s_w_log(i+1) = s_w;
+    e_v_log(i+1) = e_v; e_w_log(i+1) = e_w;
+    
+    % Animation update
+    set(trail, 'XData', state(1:i+1,1), 'YData', state(1:i+1,2));
+    theta = state(i+1,3);
+    Rmat = [cos(theta) -sin(theta); sin(theta) cos(theta)];
+    body_rot = Rmat * [body_x; body_y];
+    set(robot_body, 'XData', body_rot(1,:) + state(i+1,1), 'YData', body_rot(2,:) + state(i+1,2));
+    
+    wl_center = Rmat * wheel_l_offset';
+    wl_rot = Rmat * [wheel_l_x; wheel_l_y];
+    set(wheel_left, 'XData', wl_rot(1,:) + state(i+1,1) + wl_center(1), ...
+                        'YData', wl_rot(2,:) + state(i+1,2) + wl_center(2));
+    
+    wr_center = Rmat * wheel_r_offset';
+    wr_rot = Rmat * [wheel_r_x; wheel_r_y];
+    set(wheel_right, 'XData', wr_rot(1,:) + state(i+1,1) + wr_center(1), ...
+                         'YData', wr_rot(2,:) + state(i+1,2) + wr_center(2));
+    
+    set(arrow, 'XData', state(i+1,1), 'YData', state(i+1,2), ...
+               'UData', 0.3*cos(theta), 'VData', 0.3*sin(theta));
+    
+    drawnow;
+
+    frame = getframe(gcf);         
+    writeVideo(video_obj, frame);
+
+    pause(0.01);
+end
+
+close(video_obj);
+
+disp('SMC.mp4');
+
+% 原有速度跟踪图
+figure('Position',[100 100 900 500]);
+subplot(2,1,1);
+plot(t, v_d_log, 'k--', t, v_log, 'b', 'LineWidth', 1.5);
+ylabel('v (m/s)'); legend('v_{ref}', 'v_{actual}'); grid on;
+title('SMC Linear Velocity Tracking');
+
+subplot(2,1,2);
+plot(t, rad2deg(w_d_log), 'k--', t, rad2deg(w_log), 'r', 'LineWidth', 1.5);
+ylabel('\omega (deg/s)'); xlabel('Time (s)');
+legend('\omega_{ref}', '\omega_{actual}'); grid on;
+title('SMC Angular Velocity Tracking');
+
+% 新增：滑模面和误差图
+figure('Position',[100 100 900 600]);
+subplot(2,1,1);
+plot(t, s_v_log, 'b', t, s_w_log, 'r', 'LineWidth', 1.5);
+ylabel('Sliding Surface s');
+legend('s_v (= e_v)', 's_w (= e_w)');
+title('Sliding Surfaces');
+grid on;
+
+subplot(2,1,2);
+plot(t, e_v_log, 'b', t, e_w_log, 'r', 'LineWidth', 1.5);
+ylabel('Velocity Error e');
+xlabel('Time (s)');
+legend('e_v', 'e_w');
+title('Velocity Tracking Errors');
+grid on;
