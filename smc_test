@@ -19,7 +19,6 @@ e_v_log = zeros(size(t)); e_w_log = zeros(size(t));
 v_d = 0.6 * ones(size(t));
 w_d = 1.0 * sin(0.8*t);
 
-% === 新增：计算参考轨迹 (积分参考速度得到预期位置) ===
 ref_pose = zeros(length(t), 3);
 ref_pose(1,:) = [0, 0, 0];
 for i = 1:length(t)-1
@@ -52,7 +51,6 @@ xlabel('X (m)'); ylabel('Y (m)');
 
 desired_traj_plot = plot(x_ref, y_ref, 'r--', 'LineWidth', 2);
 
-% 实际轨迹（蓝色实线）
 trail = plot(0,0,'b-','LineWidth',2);
 
 robot_body = fill(body_x, body_y, 'c', 'FaceAlpha',0.7);
@@ -134,7 +132,6 @@ close(video_obj);
 
 disp('SMC.mp4');
 
-% 原有速度跟踪图
 figure('Position',[100 100 900 500]);
 subplot(2,1,1);
 plot(t, v_d_log, 'k--', t, v_log, 'b', 'LineWidth', 1.5);
@@ -147,7 +144,6 @@ ylabel('\omega (deg/s)'); xlabel('Time (s)');
 legend('\omega_{ref}', '\omega_{actual}'); grid on;
 title('SMC Angular Velocity Tracking');
 
-% 新增：滑模面和误差图
 figure('Position',[100 100 900 600]);
 subplot(2,1,1);
 plot(t, s_v_log, 'b', t, s_w_log, 'r', 'LineWidth', 1.5);
