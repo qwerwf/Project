@@ -21,7 +21,7 @@ No additional installations needed; the script is self-contained.
 ## Installation
 
 ```bash
-Clone the repository:textgit clone https://github.com/yourusername/robot-project.git
+Clone the repository:textgit clone https://github.com/qwerwf/Project.git
 cd robot-project
 ```
 
